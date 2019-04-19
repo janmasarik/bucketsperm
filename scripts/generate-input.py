@@ -12,6 +12,8 @@ def generate_permutations(keyword, wordlist):
         "{permutation}{keyword}",
         "{keyword}.{permutation}",
         "{permutation}.{keyword}",
+        "{keyword}",
+        "{permutation}",
     ]
 
     for word in wordlist:
@@ -23,23 +25,27 @@ def generate_permutations(keyword, wordlist):
 
 @click.command()
 @click.option("-d", "--domains", help="List of domains")
+@click.option("-sd", "--domain", help="Single domain name")
 @click.option(
     "-w", "--wordlist", help="List of possible bucket names like admin, dev, logs"
 )
 @click.option("-o", "--output", help="Output file name")
-def main(domains, wordlist, output):
-    with open(domains) as domains_file:
-        domains = domains_file.read().splitlines()
+def main(domains, domain, wordlist, output):
+    if domain:
+        domains = [domain]
+    else:
+        with open(domains) as domains_file:
+            domains = domains_file.read().splitlines()
 
     with open(wordlist) as wordlist_file:
         wordlist = wordlist_file.read().splitlines()
 
-    result = []
+    result = set()
     for domain in domains:
-        result.extend(generate_permutations(domain, wordlist))
+        result.update(generate_permutations(domain, wordlist))
 
     with open(output, "w") as output_file:
-        output_file.write("\n".join(result))
+        output_file.write("\n".join(sorted(result)))
 
 
 if __name__ == "__main__":
