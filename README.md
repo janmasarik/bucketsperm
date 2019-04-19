@@ -1,22 +1,26 @@
 # low-hanging
-`low-hanging` aims to be lightweight and extensible horizontal vulnerability scanner. 
+`bucketsperm` aims to be an unified bucket permission checker for all available providers. 
 
-Just pass list of domains/IPs and `low-hanging` will check for easily detectable vulnerabilities with low false positive rate.
+It *doesn't* aim to be an enumerator, there are tools which are faster and better for it (like `massdns`, `wfuzz` or `gobuster`).
 
-Made to be easily extensible. Adding more checks is just few lines of code with features like JS rendering in your possession thanks to `requests-html`.
-
-Inspired by https://github.com/tomnomnom/meg, but made to be easily pluggable into your fully automated workflow.
+Provide a list of buckets and optionally a namespace to be used with Oracle and Azure buckets. 
 
 ## Usage
 ```bash
-$ docker run s14ve/low-hanging --help
-Usage: low_hanging.py [OPTIONS]
+$ docker run s14ve/bucketsperm --help
+Usage: bucketsperm [OPTIONS]
 
 Options:
   -i, --input TEXT       Path to file with list of domains/IPs separated by
                          newline.
-  -t, --threads INTEGER  Number of threads with which you want to run.
+  -s, --single TEXT      Check a single bucket name
   -o, --output TEXT      Output files to file in json format.
+  -t, --threads INTEGER  Number of threads with which you want to run.
+  -n, --namespace TEXT   Namespace used for Oracle namespace and Azure account
+                         name. Defaults to bucket name.
+  -v, --verbosity LVL    Either CRITICAL, ERROR, WARNING, INFO or DEBUG
   --help                 Show this message and exit.
 ``` 
 
+## Supported providers
+Please see `bucketsperm/modules/*` for list of available modules. 
