@@ -137,7 +137,7 @@ def main(
 
     if output_file:
         with open(output_file, "w") as f:
-            json.dump(parsed_results, f, sort_keys=True)
+            f.write("\n".join(sorted(parsed_results)))
 
     if only_readable_file:
         readable = [bucket.to_string() for bucket in results_list if bucket.read]
