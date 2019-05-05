@@ -46,5 +46,5 @@ class Bucket:
             if acl is True
         ]
 
-        return ",".join([self.url] + permissions)
+        return f"{self.url} {','.join(permissions)}"
 

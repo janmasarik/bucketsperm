@@ -162,21 +162,21 @@ def main(
 
     if output_file:
         with open(output_file, "w") as f:
-            f.write("\n".join(sorted(parsed_results)))
+            f.write("\n".join(sorted(parsed_results)) + "\n" if parsed_results else "")
 
     if only_readable_file:
         readable = [bucket.to_string() for bucket in results_list if bucket.read]
         with open(only_readable_file, "w") as f:
-            f.write("\n".join(sorted(readable)))
+            f.write("\n".join(sorted(readable)) + "\n" if readable else "")
 
     if only_vulnerable_file:
         vulnerable = [
             bucket.to_string()
             for bucket in results_list
-            if any((bucket.list_, bucket.write, bucket.read_acp, bucket.write_acp))
+            if any((bucket.list_, bucket.write, bucket.write_acp))
         ]
         with open(only_vulnerable_file, "w") as f:
-            f.write("\n".join(sorted(vulnerable)))
+            f.write("\n".join(sorted(vulnerable)) + "\n" if vulnerable else "")
 
 
 if __name__ == "__main__":
