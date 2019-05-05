@@ -58,6 +58,8 @@ class AWS(BaseWorker):
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
                 log.exception("Read BucketAcl unexpected error!")
+        except Exception:
+            log.exception("Read BucketAcl failed!")
 
         try:
             for _ in bucket.objects.all():
@@ -71,13 +73,17 @@ class AWS(BaseWorker):
                 "AllAccessDisabled",
             }:
                 log.exception("List Bucket unexpected error!")
+        except Exception:
+            log.exception("List Bucket failed!")
 
         try:
             bucket.upload_fileobj(io.BytesIO(self.poc_text), self.poc_filename)
             permissions.write = True
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
-                log.exception("Write bucket unexpected error!")
+                log.exception("Write to bucket unexpected error!")
+        except Exception:
+            log.exception("Write to bucket failed!")
 
         try:
             # By default, take over the bucket
@@ -106,6 +112,8 @@ class AWS(BaseWorker):
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
                 log.exception("Write BucketAcl unexpected error!")
+        except Exception:
+            log.exception("Write BucketAcl failed!")
 
         return permissions
 
