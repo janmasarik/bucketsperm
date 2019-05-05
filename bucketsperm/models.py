@@ -1,5 +1,4 @@
 import json
-import random
 import string
 
 from dataclasses import dataclass
@@ -17,6 +16,7 @@ class BaseWorker:
         self.bucket_name = bucket_name
         self.azure_namespace = azure_namespace
         self.oracle_namespace = oracle_namespace
+        self.poc_filename = "poc42"
 
     def __call__(self, *args, **kwargs):
         if self.validate_bucket_name(self.bucket_name):
@@ -24,10 +24,6 @@ class BaseWorker:
 
     def run(self):
         raise NotImplementedError
-
-    @staticmethod
-    def random_string(length=10):
-        return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
 
 @dataclass

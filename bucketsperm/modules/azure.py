@@ -14,7 +14,7 @@ class Azure(BaseWorker):
             f"https://{self.azure_namespace}.blob.core.windows.net/{self.bucket_name}"
         )
 
-        r = requests.get(f"{bucket_url}/{self.random_string()}")
+        r = requests.get(f"{bucket_url}/{self.poc_filename}")
         if "ResourceNotFound" in r.text:
             raise BucketNotFound
 

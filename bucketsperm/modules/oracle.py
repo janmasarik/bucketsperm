@@ -16,7 +16,7 @@ class Oracle(BaseWorker):
                 bucket_url = f"https://{self.oracle_namespace}.compat.objectstorage.{region}.oraclecloud.com/{self.bucket_name}"
             else:
                 bucket_url = f"https://compat.objectstorage.{region}.oraclecloud.com/n/{self.oracle_namespace}/b/{self.bucket_name}"
-            r = requests.get(f"{bucket_url}/{self.random_string()}")
+            r = requests.get(f"{bucket_url}/{self.poc_filename}")
             if "NoSuchKey" in r.text:
                 break
         else:
