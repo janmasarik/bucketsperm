@@ -73,7 +73,7 @@ class AWS(BaseWorker):
                 log.exception("List Bucket unexpected error!")
 
         try:
-            bucket.upload_fileobj(io.BytesIO(b"test"), self.poc_filename)
+            bucket.upload_fileobj(io.BytesIO(self.poc_text), self.poc_filename)
             permissions.write = True
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:

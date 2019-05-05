@@ -29,7 +29,7 @@ class AliCloud(BaseWorker):
                 return Bucket(url=bucket_url)
 
             if "The bucket you visit is not belong to you" in r.text:
-                r = requests.put(f"{bucket_url}/{self.poc_filename}", data=b"test")
+                r = requests.put(f"{bucket_url}/{self.poc_filename}", data=self.poc_text)
                 if r.status_code == 200:
                     return Bucket(url=bucket_url, read=True, write=True)
 

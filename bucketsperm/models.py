@@ -17,6 +17,7 @@ class BaseWorker:
         self.azure_namespace = azure_namespace
         self.oracle_namespace = oracle_namespace
         self.poc_filename = "poc42"
+        self.poc_text = b"Hello. This could have possibly been any malicious payload served from your infrastructure.\nPlease fix permissions of your bucket as soon as possible, \nas allowing WRITE to your bucket to anyone can potentially have devastating consequences."
 
     def __call__(self, *args, **kwargs):
         if self.validate_bucket_name(self.bucket_name):

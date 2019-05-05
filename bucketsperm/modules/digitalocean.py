@@ -44,7 +44,7 @@ class DigitalOcean(BaseWorker):
 
         try:
             client.upload_fileobj(
-                io.BytesIO(b"test"), self.bucket_name, self.poc_filename
+                io.BytesIO(self.poc_text), self.bucket_name, self.poc_filename
             )
             permissions.write = True
         except ClientError as e:
