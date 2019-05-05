@@ -34,6 +34,31 @@ class AWS(BaseWorker):
 
         permissions = Bucket(url=f"https://{self.bucket_name}.s3.amazonaws.com")
 
+        bucket_acl = []
+        try:
+            bucket_acl = bucket.Acl().grants
+            permissions.read_acp = True
+
+            for b in bucket_acl:
+                if "AllUsers" in b["Grantee"].get(
+                    "URI", []
+                ) or "AuthenticatedUsers" in b["Grantee"].get("URI", []):
+                    if (
+                        b["Permission"] == "FULL_CONTROL"
+                        or b["Permission"] == "WRITE_ACP"
+                    ):
+                        permissions.write_acp = True
+                    if b["Permission"] == "READ":
+                        permissions.list_ = True
+                    if b["Permission"] == "WRITE":
+                        permissions.write = True
+
+            return permissions  # No need to continue, we have everything we need
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
+                log.exception("Read BucketAcl unexpected error!")
+
         try:
             for _ in bucket.objects.all():
                 break  # We just need to detect if iterator starts
@@ -53,14 +78,6 @@ class AWS(BaseWorker):
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
                 log.exception("Write bucket unexpected error!")
-
-        bucket_acl = []
-        try:
-            bucket_acl = bucket.Acl().grants
-            permissions.read_acp = True
-        except ClientError as e:
-            if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
-                log.exception("Read BucketAcl unexpected error!")
 
         try:
             # By default, take over the bucket

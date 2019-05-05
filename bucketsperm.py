@@ -8,6 +8,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
+from bucketsperm.models import BucketNotFound
 from bucketsperm.modules import AWS, DigitalOcean, Google, AliCloud, Azure, Oracle
 
 log = logging.getLogger()
@@ -49,8 +50,10 @@ def gather(buckets, threads, namespace, quiet, enabled_modules_list):
                         continue
 
                     results[worker_name].append(result)
+                except BucketNotFound:
+                    pass
                 except Exception as e:
-                    log.debug("{}\nWorker {} failed!".format(e, worker_name))
+                    log.info("{}\nWorker {} failed!".format(e, worker_name))
 
     return results
 
