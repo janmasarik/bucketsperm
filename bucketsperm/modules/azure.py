@@ -11,7 +11,7 @@ class Azure(BaseWorker):
 
     def run(self):
         bucket_url = (
-            f"https://{self.namespace}.blob.core.windows.net/{self.bucket_name}"
+            f"https://{self.azure_namespace}.blob.core.windows.net/{self.bucket_name}"
         )
 
         r = requests.get(f"{bucket_url}/{self.random_string()}")

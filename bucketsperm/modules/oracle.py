@@ -13,9 +13,9 @@ class Oracle(BaseWorker):
         regions = ["eu-frankfurt-1", "uk-london-1", "us-phoenix-1", "us-ashburn-1"]
         for region in regions:
             if region == "uk-london-1":
-                bucket_url = f"https://{self.namespace}.compat.objectstorage.{region}.oraclecloud.com/{self.bucket_name}"
+                bucket_url = f"https://{self.oracle_namespace}.compat.objectstorage.{region}.oraclecloud.com/{self.bucket_name}"
             else:
-                bucket_url = f"https://compat.objectstorage.{region}.oraclecloud.com/n/{self.namespace}/b/{self.bucket_name}"
+                bucket_url = f"https://compat.objectstorage.{region}.oraclecloud.com/n/{self.oracle_namespace}/b/{self.bucket_name}"
             r = requests.get(f"{bucket_url}/{self.random_string()}")
             if "NoSuchKey" in r.text:
                 break

@@ -15,9 +15,11 @@ log = logging.getLogger()
 click_log.basic_config(log)
 
 
-def gather(buckets, threads, namespace, quiet, enabled_modules_list):
+def gather(
+    buckets, threads, azure_namespace, oracle_namespace, quiet, enabled_modules_list
+):
 
-    _modules = {
+    active_modules = {
         "s3": AWS,
         "digitalocean": DigitalOcean,
         "google": Google,
@@ -25,16 +27,26 @@ def gather(buckets, threads, namespace, quiet, enabled_modules_list):
         "azure": Azure,
         "oracle": Oracle,
     }
-    enabled_modules = [_modules[m] for m in enabled_modules_list]
-    if not enabled_modules:
-        enabled_modules = _modules.values()
+
+    if not azure_namespace:  # No need to waste egress traffic
+        active_modules.pop("azure")
+
+    if not oracle_namespace:  # No need to waste egress traffic
+        active_modules.pop("oracle")
+
+    enabled_modules = [active_modules[m] for m in enabled_modules_list]
+
+    if not enabled_modules:  # Enable everything in case providers are not specified
+        enabled_modules = active_modules.values()
 
     results = defaultdict(list)
 
     with ThreadPoolExecutor(max_workers=threads) as executor:
         for bucket_name in tqdm(buckets, desc=" buckets", disable=quiet):
             future_to_name = {
-                executor.submit(worker(bucket_name, namespace)): worker.name
+                executor.submit(
+                    worker(bucket_name, azure_namespace, oracle_namespace)
+                ): worker.name
                 for worker in enabled_modules
             }
             for future in tqdm(
@@ -98,9 +110,14 @@ def filter_buckets(buckets_list):
     help="Comma separated list of enabled providers. Example: 's3,google,amazon'. Defaults to all.",
 )
 @click.option(
-    "-n",
-    "--namespace",
-    help="Namespace used as a Oracle namespace and Azure account name. Defaults to bucket name.",
+    "--azure-namespace",
+    "azure_namespace",
+    help="Azure account name. Needs to be bruteforced in advance. If not specified, azure module will not run.",
+)
+@click.option(
+    "--oracle-namespace",
+    "oracle_namespace",
+    help="Oracle namespace name. Needs to be _guessed_ in advance as Oracle doesn't allow easy bruteforcing (please contact me if you'll find an easy way). If not specified, oracle module will not run.",
 )
 @click.option("-q", "--quiet", is_flag=True, help="Disable progress bar")
 @click_log.simple_verbosity_option(log)
@@ -111,7 +128,8 @@ def main(
     output_file,
     only_readable_file,
     only_vulnerable_file,
-    namespace,
+    azure_namespace,
+    oracle_namespace,
     enabled_providers,
     quiet,
 ):
@@ -125,10 +143,14 @@ def main(
     if enabled_providers:
         enabled_providers = enabled_providers.replace(" ", "").split(",")
 
-    if namespace and len(namespace.split(".")) >= 2:
-        namespace = namespace.split(".")[-2]
-
-    results = gather(input_buckets, threads, namespace, quiet, enabled_providers)
+    results = gather(
+        input_buckets,
+        threads,
+        azure_namespace,
+        oracle_namespace,
+        quiet,
+        enabled_providers,
+    )
 
     results_list = [
         bucket for provider, buckets in results.items() for bucket in buckets

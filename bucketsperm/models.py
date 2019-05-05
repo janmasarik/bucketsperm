@@ -13,9 +13,10 @@ class BucketNotFound(Exception):
 class BaseWorker:
     name = "default"
 
-    def __init__(self, bucket_name, namespace=None):
+    def __init__(self, bucket_name, azure_namespace=None, oracle_namespace=None):
         self.bucket_name = bucket_name
-        self.namespace = namespace if namespace is not None else bucket_name
+        self.azure_namespace = azure_namespace
+        self.oracle_namespace = oracle_namespace
 
     def __call__(self, *args, **kwargs):
         if self.validate_bucket_name(self.bucket_name):
