@@ -21,15 +21,15 @@ class Azure(BaseWorker):
         permissions = Bucket(url=bucket_url)
 
         r = requests.get(bucket_url, params={"restype": "container", "comp": "list"})
+        print(r.text)
         permissions.read = True
         if "ResourceNotFound" not in r.text:
-            permissions.list = True
+            permissions.list_ = True
 
         return permissions
 
     @staticmethod
     def validate_bucket_name(bucket_name):
-        # http://docs-aliyun.cn-hangzhou.oss.aliyun-inc.com/pdf/oss-sdk-intl-en-2017-05-16.pdf
         if len(bucket_name) < 3 or len(bucket_name) > 63:
             return False
 

@@ -79,14 +79,14 @@ def filter_buckets(buckets_list):
     "-i",
     "--input",
     "input_file",
-    help="Path to file with list of domains/IPs separated by newline.",
+    help="Path to file with list of bucket names",
 )
 @click.option("-s", "--single", "bucket_name", help="Check a single bucket name")
 @click.option(
     "-o",
     "--output",
     "output_file",
-    help="Output all results to a file with corresponding permissions in json format.",
+    help="Output all results to a specified file in json format.",
 )
 @click.option(
     "-t", "--threads", default=50, help="Number of threads with which you want to run."
@@ -107,7 +107,7 @@ def filter_buckets(buckets_list):
     "--enabled-providers",
     "enabled_providers",
     default="",
-    help="Comma separated list of enabled providers. Example: 's3,google,amazon'. Defaults to all.",
+    help="Comma separated list of enabled providers. Example: 's3,google,amazon'. Defaults to all with required parameters (especially azure and oracle).",
 )
 @click.option(
     "--azure-namespace",
