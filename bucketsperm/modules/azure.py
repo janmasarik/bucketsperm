@@ -14,15 +14,15 @@ class Azure(BaseWorker):
             f"https://{self.azure_namespace}.blob.core.windows.net/{self.bucket_name}"
         )
 
+        permissions = Bucket(url=bucket_url)
         r = requests.get(f"{bucket_url}/{self.poc_filename}")
         if "ResourceNotFound" in r.text:
             raise BucketNotFound
 
-        permissions = Bucket(url=bucket_url)
+        if "BlobNotFound" in r.text:
+            permissions.read = True
 
         r = requests.get(bucket_url, params={"restype": "container", "comp": "list"})
-        print(r.text)
-        permissions.read = True
         if "ResourceNotFound" not in r.text:
             permissions.list_ = True
 
