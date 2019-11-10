@@ -68,28 +68,29 @@ class DigitalOcean(BaseWorker):
                 log.exception("Read BucketAcl unexpected error!")
 
         try:
-            owner = bucket_acl.get("Owner") or {
-                "DisplayName": os.getenv("DO_USER_ID"),
-                "ID": os.getenv("DO_USER_ID"),
-            }
-            bucket_acl = bucket_acl.get("Grants", [])
-
-            bucket_acl.append(
-                {
-                    "Grantee": {
-                        "DisplayName": os.getenv("DO_USER_ID"),
-                        "ID": os.getenv("DO_USER_ID"),
-                        "Type": "CanonicalUser",
-                    },
-                    "Permission": "FULL_CONTROL",
+            if self.yolo:
+                owner = bucket_acl.get("Owner") or {
+                    "DisplayName": os.getenv("DO_USER_ID"),
+                    "ID": os.getenv("DO_USER_ID"),
                 }
-            )
+                bucket_acl = bucket_acl.get("Grants", [])
 
-            client.put_bucket_acl(
-                Bucket=self.bucket_name,
-                AccessControlPolicy={"Grants": bucket_acl, "Owner": owner},
-            )
-            permissions.write_acp = True
+                bucket_acl.append(
+                    {
+                        "Grantee": {
+                            "DisplayName": os.getenv("DO_USER_ID"),
+                            "ID": os.getenv("DO_USER_ID"),
+                            "Type": "CanonicalUser",
+                        },
+                        "Permission": "FULL_CONTROL",
+                    }
+                )
+
+                client.put_bucket_acl(
+                    Bucket=self.bucket_name,
+                    AccessControlPolicy={"Grants": bucket_acl, "Owner": owner},
+                )
+                permissions.write_acp = True
         except ClientError as e:
             if e.response["Error"]["Code"] != "AccessDenied":
                 log.exception("Write BucketAcl unexpected error!")
@@ -114,6 +115,12 @@ class DigitalOcean(BaseWorker):
         allowed_chars = set(string.digits + string.ascii_letters + "-")
 
         if any(c not in allowed_chars for c in bucket_name):
+            return False
+
+        if any(
+            c not in set(string.ascii_letters + string.digits)
+            for c in [bucket_name[0], bucket_name[-1]]
+        ):
             return False
 
         return True

@@ -18,19 +18,20 @@ class AWS(BaseWorker):
         "https://labs.detectify.com/2017/07/13/a-deep-dive-into-aws-s3-access-controls-taking-full-control-over-your-assets/#bucket-write-acp"
     ]
 
+    client = boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+    )
+    s3 = boto3.resource("s3")
+
     def run(self):
 
         r = requests.head(f"http://{self.bucket_name}.s3.amazonaws.com")
         if r.status_code == 404:
             raise BucketNotFound
 
-        client = boto3.client(
-            "s3",
-            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        )
-        s3 = boto3.resource("s3")
-        bucket = s3.Bucket(self.bucket_name)
+        bucket = self.s3.Bucket(self.bucket_name)
 
         permissions = Bucket(url=f"https://{self.bucket_name}.s3.amazonaws.com")
 
@@ -86,29 +87,35 @@ class AWS(BaseWorker):
             log.exception("Write to bucket failed!")
 
         try:
-            # By default, take over the bucket
-            owner = {"DisplayName": os.getenv("AWS_USER"), "ID": os.getenv("AWS_ID")}
-            for acl in bucket_acl:
-                if acl["Permission"] == "FULL_CONTROL" and acl["Grantee"].get("ID"):
-                    # Try to guess the current owner of the bucket
-                    owner = {
-                        "DisplayName": acl["Grantee"]["DisplayName"],
-                        "ID": acl["Grantee"]["ID"],
-                    }
-
-            bucket_acl.append(
-                {
-                    "Grantee": {
-                        "DisplayName": os.getenv("AWS_USER"),
-                        "ID": os.getenv("AWS_ID"),
-                        "Type": "CanonicalUser",
-                    },
-                    "Permission": "FULL_CONTROL",
+            if self.yolo:
+                # Try to take over the bucket
+                owner = {
+                    "DisplayName": os.getenv("AWS_USER"),
+                    "ID": os.getenv("AWS_ID"),
                 }
-            )
+                for acl in bucket_acl:
+                    if acl["Permission"] == "FULL_CONTROL" and acl["Grantee"].get("ID"):
+                        # Try to guess the current owner of the bucket
+                        owner = {
+                            "DisplayName": acl["Grantee"]["DisplayName"],
+                            "ID": acl["Grantee"]["ID"],
+                        }
 
-            bucket.Acl().put(AccessControlPolicy={"Grants": bucket_acl, "Owner": owner})
-            permissions.write_acp = True
+                bucket_acl.append(
+                    {
+                        "Grantee": {
+                            "DisplayName": os.getenv("AWS_USER"),
+                            "ID": os.getenv("AWS_ID"),
+                            "Type": "CanonicalUser",
+                        },
+                        "Permission": "FULL_CONTROL",
+                    }
+                )
+
+                bucket.Acl().put(
+                    AccessControlPolicy={"Grants": bucket_acl, "Owner": owner}
+                )
+                permissions.write_acp = True
         except ClientError as e:
             if e.response["Error"]["Code"] not in {"AccessDenied", "AllAccessDisabled"}:
                 log.exception("Write BucketAcl unexpected error!")

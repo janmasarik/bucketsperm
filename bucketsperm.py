@@ -4,7 +4,6 @@ import click_log
 import json
 import logging
 
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from tqdm import tqdm
 
@@ -16,7 +15,13 @@ click_log.basic_config(log)
 
 
 def gather(
-    buckets, threads, azure_namespace, oracle_namespace, quiet, enabled_modules_list
+    buckets,
+    threads,
+    azure_namespace,
+    oracle_namespace,
+    quiet,
+    enabled_modules_list,
+    yolo,
 ):
 
     active_modules = {
@@ -39,33 +44,33 @@ def gather(
     if not enabled_modules:  # Enable everything in case providers are not specified
         enabled_modules = active_modules.values()
 
-    results = defaultdict(list)
-
+    results = []
+    futures = []
     with ThreadPoolExecutor(max_workers=threads) as executor:
-        for bucket_name in tqdm(buckets, desc=" buckets", disable=quiet):
-            future_to_name = {
-                executor.submit(
-                    worker(bucket_name, azure_namespace, oracle_namespace)
-                ): worker.name
-                for worker in enabled_modules
-            }
-            for future in tqdm(
-                concurrent.futures.as_completed(future_to_name),
-                total=len(future_to_name),
-                unit=" providers",
-                disable=quiet,
-            ):
-                worker_name = future_to_name[future]
-                try:
-                    result = future.result()
-                    if not result:
-                        continue
+        for bucket_name in buckets:
+            for worker in enabled_modules:
+                futures.append(
+                    executor.submit(
+                        worker(bucket_name, azure_namespace, oracle_namespace, yolo)
+                    )
+                )
 
-                    results[worker_name].append(result)
-                except BucketNotFound:
-                    pass
-                except Exception as e:
-                    log.info("{}\nWorker {} failed!".format(e, worker_name))
+        for future in tqdm(
+            concurrent.futures.as_completed(futures),
+            desc=" buckets",
+            total=len(futures),
+            disable=quiet,
+        ):
+            try:
+                result = future.result()
+                if not result:
+                    continue
+
+                results.append(result)
+            except BucketNotFound:
+                pass
+            except Exception as e:
+                log.exception("{}\nWorker failed!".format(e))
 
     return results
 
@@ -76,16 +81,14 @@ def filter_buckets(buckets_list):
 
 @click.command()
 @click.option(
-    "-i",
-    "--input",
-    "input_file",
-    help="Path to file with list of bucket names",
+    "-i", "--input", "input_file", help="Path to file with list of bucket names"
 )
 @click.option("-s", "--single", "bucket_name", help="Check a single bucket name")
 @click.option(
     "-o",
     "--output",
     "output_file",
+    default="buckets.txt",
     help="Output all results to a specified file in json format.",
 )
 @click.option(
@@ -94,20 +97,20 @@ def filter_buckets(buckets_list):
 @click.option(
     "--only-readable-file",
     "only_readable_file",
-    default=False,
+    default="readable_buckets.txt",
     help="Output buckets which are confirmed to be readable.",
 )
 @click.option(
     "--only-vulnerable-file",
     "only_vulnerable_file",
-    default=False,
+    default="vulnerable_buckets.txt",
     help="Output buckets with LIST, WRITE, READ_ACP or WRITE_ACP enabled.",
 )
 @click.option(
     "--enabled-providers",
     "enabled_providers",
     default="",
-    help="Comma separated list of enabled providers. Example: 's3,google,amazon'. Defaults to all with required parameters (especially azure and oracle).",
+    help="Comma separated list of enabled providers. Example: 's3,google,digitalocean,alicloud,oracle,azure'. Defaults to all with required parameters (especially azure and oracle).",
 )
 @click.option(
     "--azure-namespace",
@@ -120,6 +123,11 @@ def filter_buckets(buckets_list):
     help="Oracle namespace name. Needs to be _guessed_ in advance as Oracle doesn't allow easy bruteforcing (please contact me if you'll find an easy way). If not specified, oracle module will not run.",
 )
 @click.option("-q", "--quiet", is_flag=True, help="Disable progress bar")
+@click.option(
+    "--yolo",
+    is_flag=True,
+    help="Try to overwrite ACP of the bucket. Use on your own responsibility.",
+)
 @click_log.simple_verbosity_option(log)
 def main(
     input_file,
@@ -132,6 +140,7 @@ def main(
     oracle_namespace,
     enabled_providers,
     quiet,
+    yolo,
 ):
     input_buckets = []
     if input_file:
@@ -150,32 +159,29 @@ def main(
         oracle_namespace,
         quiet,
         enabled_providers,
+        yolo,
     )
 
-    results_list = [
-        bucket for provider, buckets in results.items() for bucket in buckets
-    ]
+    parsed_results = sorted([bucket.to_string() for bucket in results])
 
-    parsed_results = [bucket.to_string() for bucket in results_list]
+    click.echo("\n".join(parsed_results))
 
-    click.echo("\n".join(sorted(parsed_results)))
+    with open(output_file, "w") as f:
+        if output_file:
+            f.write("\n".join(parsed_results) + "\n" if parsed_results else "")
 
-    if output_file:
-        with open(output_file, "w") as f:
-            f.write("\n".join(sorted(parsed_results)) + "\n" if parsed_results else "")
-
-    if only_readable_file:
-        readable = [bucket.to_string() for bucket in results_list if bucket.read]
-        with open(only_readable_file, "w") as f:
+    with open(only_readable_file, "w") as f:
+        if only_readable_file:
+            readable = [bucket.to_string() for bucket in results if bucket.read]
             f.write("\n".join(sorted(readable)) + "\n" if readable else "")
 
-    if only_vulnerable_file:
-        vulnerable = [
-            bucket.to_string()
-            for bucket in results_list
-            if any((bucket.list_, bucket.write, bucket.write_acp))
-        ]
-        with open(only_vulnerable_file, "w") as f:
+    with open(only_vulnerable_file, "w") as f:
+        if only_vulnerable_file:
+            vulnerable = [
+                bucket.to_string()
+                for bucket in results
+                if any((bucket.list_, bucket.write, bucket.write_acp))
+            ]
             f.write("\n".join(sorted(vulnerable)) + "\n" if vulnerable else "")
 
 
